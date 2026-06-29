@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: google-review
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: REDIS_URL
+        scope: build
+        value: ${REDIS_URL}
