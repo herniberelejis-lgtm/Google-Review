@@ -2,11 +2,6 @@
   "name": "google-review-app",
   "version": "1.0.0",
   "scripts": {
-    "start": "node api/index.js",
-    "dev": "node api/index.js"
-  },
-  "dependencies": {
-    "@upstash/redis": "^1.34.0",
-    "qrcode": "^1.5.4"
+    "start": "node api/index.js"
   }
 }

@@ -1,37 +1,9 @@
 const http = require('http');
 const url = require('url');
-const QRCode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
 
-let redis = null;
 const memory = {};
-
-try {
-  if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-    const { Redis } = require('@upstash/redis');
-    redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN,
-    });
-  }
-} catch (e) {
-  console.log('Redis no configurado, usando almacenamiento en memoria');
-}
-
-const getRedis = async (key) => {
-  if (redis) return await redis.get(key);
-  return memory[key] || null;
-};
-
-const setRedis = async (key, value) => {
-  if (redis) await redis.set(key, value);
-  memory[key] = value;
-};
-
-const incrRedis = async (key) => {
-  if (redis) return await redis.incr(key);
-  memory[key] = (memory[key] || 0) + 1;
-  return memory[key];
-};
 
 const server = http.createServer(async (req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -49,10 +21,25 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // Servir archivos estáticos
+    if (pathname.startsWith('/public/')) {
+      const filePath = path.join(__dirname, '..', pathname);
+      try {
+        const content = fs.readFileSync(filePath, 'utf-8');
+        res.writeHead(200, { 'Content-Type': 'text/html' });
+        res.end(content);
+        return;
+      } catch (e) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+    }
+
     // Redirigir a Google Maps
     if (pathname.startsWith('/r/')) {
       const code = pathname.split('/')[2];
-      const piece = await getRedis(`piece:${code}`);
+      const piece = memory[`piece:${code}`];
 
       if (!piece) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
@@ -61,7 +48,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const source = query.s === 'q' ? 'qr' : query.s === 'n' ? 'nfc' : 'web';
-      await incrRedis(`stats:${code}:${source}`);
+      memory[`stats:${code}:${source}`] = (memory[`stats:${code}:${source}`] || 0) + 1;
 
       res.writeHead(302, { Location: piece.link });
       res.end();
@@ -76,7 +63,7 @@ const server = http.createServer(async (req, res) => {
 
         for (let i = 1; i <= total; i++) {
           const code = String(i).padStart(3, '0');
-          const piece = await getRedis(`piece:${code}`);
+          const piece = memory[`piece:${code}`];
           pieces.push({
             code,
             name: piece?.name || null,
@@ -93,11 +80,16 @@ const server = http.createServer(async (req, res) => {
       if (req.method === 'POST') {
         let body = '';
         req.on('data', (chunk) => (body += chunk));
-        req.on('end', async () => {
-          const { code, name, link } = JSON.parse(body);
-          await setRedis(`piece:${code}`, { name, link });
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true }));
+        req.on('end', () => {
+          try {
+            const { code, name, link } = JSON.parse(body);
+            memory[`piece:${code}`] = { name, link };
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
+          } catch (e) {
+            res.writeHead(400);
+            res.end('Invalid JSON');
+          }
         });
         return;
       }
@@ -110,9 +102,9 @@ const server = http.createServer(async (req, res) => {
 
       for (let i = 1; i <= total; i++) {
         const code = String(i).padStart(3, '0');
-        const qr = await getRedis(`stats:${code}:qr`) || 0;
-        const nfc = await getRedis(`stats:${code}:nfc`) || 0;
-        const web = await getRedis(`stats:${code}:web`) || 0;
+        const qr = memory[`stats:${code}:qr`] || 0;
+        const nfc = memory[`stats:${code}:nfc`] || 0;
+        const web = memory[`stats:${code}:web`] || 0;
 
         if (qr > 0 || nfc > 0 || web > 0) {
           stats[code] = { qr, nfc, web, total: qr + nfc + web };
@@ -124,14 +116,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // API: generar QR
+    // API: generar QR simple (placeholder)
     if (pathname === '/api/admin/qr') {
       const code = query.code;
       const appUrl = `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : 'http://localhost:3000'}/r/${code}?s=q`;
 
-      const qrCode = await QRCode.toDataURL(appUrl);
+      // Simple SVG QR placeholder
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+        <rect width="200" height="200" fill="white"/>
+        <text x="50" y="100" font-size="14" text-anchor="middle">${code}</text>
+      </svg>`;
+
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ qr: qrCode }));
+      res.end(JSON.stringify({ qr: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` }));
+      return;
+    }
+
+    // Root
+    if (pathname === '/' || pathname === '') {
+      const content = fs.readFileSync(path.join(__dirname, '..', 'public/login.html'), 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(content);
       return;
     }
 
