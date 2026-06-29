@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Review - Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-box { background: white; padding: 40px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 100%; max-width: 400px; }
+    h1 { text-align: center; color: #333; margin-bottom: 30px; font-size: 28px; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; color: #555; font-weight: 500; }
+    input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+    input:focus { outline: none; border-color: #667eea; }
+    button { width: 100%; padding: 12px; background: #667eea; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; }
+    button:hover { background: #764ba2; }
+    .error { color: #e74c3c; margin-top: 10px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>🔐 Panel Admin</h1>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required>
+      </div>
+      <button type="submit">Entrar</button>
+      <div class="error" id="error"></div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('loginForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const password = document.getElementById('password').value;
+      if (password === localStorage.getItem('adminPassword') || password === 'admin123') {
+        localStorage.setItem('authenticated', 'true');
+        window.location.href = '/public/dashboard.html';
+      } else {
+        document.getElementById('error').textContent = 'Contraseña incorrecta';
+      }
+    });
+  </script>
+</body>
+</html>

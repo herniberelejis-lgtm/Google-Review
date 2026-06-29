@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Google Review - Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f7fa; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header { background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h1 { color: #333; font-size: 24px; }
+    .logout { background: #e74c3c; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .card h3 { color: #667eea; margin-bottom: 15px; }
+    .card input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; }
+    .card button { width: 100%; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; margin-bottom: 10px; }
+    .card button:hover { background: #764ba2; }
+    .qr-container { text-align: center; margin-top: 10px; }
+    .qr-container img { max-width: 150px; }
+    .download-btn { background: #27ae60; font-size: 12px; padding: 8px; }
+    .status { padding: 5px 10px; border-radius: 5px; font-size: 12px; text-align: center; }
+    .status.libre { background: #d5f4e6; color: #27ae60; }
+    .status.configurada { background: #ffeaa7; color: #f39c12; }
+    .stats { background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+    .stat-box { background: #f0f0f0; padding: 15px; border-radius: 5px; text-align: center; }
+    .stat-box h4 { color: #667eea; font-size: 14px; }
+    .stat-box p { font-size: 24px; font-weight: bold; color: #333; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📊 Dashboard - Google Reviews</h1>
+      <button class="logout" onclick="logout()">Salir</button>
+    </header>
+
+    <div class="stats" id="stats-container">
+      <h2>📈 Estadísticas</h2>
+      <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <h2 style="margin-bottom: 20px;">🔧 Configurar Piezas</h2>
+    <div class="grid" id="piecesGrid"></div>
+  </div>
+
+  <script>
+    if (!localStorage.getItem('authenticated')) {
+      window.location.href = '/public/login.html';
+    }
+
+    async function loadPieces() {
+      try {
+        const response = await fetch('/api/admin/pieces');
+        const pieces = await response.json();
+        renderPieces(pieces);
+      } catch (error) {
+        console.error('Error cargando piezas:', error);
+      }
+    }
+
+    async function loadStats() {
+      try {
+        const response = await fetch('/api/admin/stats');
+        const stats = await response.json();
+        renderStats(stats);
+      } catch (error) {
+        console.error('Error cargando stats:', error);
+      }
+    }
+
+    function renderPieces(pieces) {
+      const grid = document.getElementById('piecesGrid');
+      grid.innerHTML = '';
+      pieces.forEach((piece) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h3>Pieza #${piece.code}</h3>
+          <div class="status ${piece.status}">${piece.status}</div>
+          <input type="text" id="name-${piece.code}" placeholder="Nombre del negocio" value="${piece.name || ''}">
+          <input type="url" id="link-${piece.code}" placeholder="Link Google Maps" value="${piece.link || ''}">
+          <button onclick="savePiece('${piece.code}')">💾 Guardar</button>
+          <button class="download-btn" onclick="downloadQR('${piece.code}')">📥 Descargar QR</button>
+          <div class="qr-container" id="qr-${piece.code}"></div>
+        `;
+        grid.appendChild(card);
+
+        if (piece.status === 'configurada') {
+          loadQR(piece.code);
+        }
+      });
+    }
+
+    async function savePiece(code) {
+      const name = document.getElementById(`name-${code}`).value;
+      const link = document.getElementById(`link-${code}`).value;
+
+      if (!name || !link) {
+        alert('Completa todos los campos');
+        return;
+      }
+
+      try {
+        await fetch('/api/admin/pieces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code, name, link }),
+        });
+        alert('✅ Pieza guardada');
+        loadPieces();
+      } catch (error) {
+        console.error('Error guardando:', error);
+        alert('❌ Error al guardar');
+      }
+    }
+
+    async function loadQR(code) {
+      try {
+        const response = await fetch(`/api/admin/qr?code=${code}`);
+        const data = await response.json();
+        const container = document.getElementById(`qr-${code}`);
+        const img = document.createElement('img');
+        img.src = data.qr;
+        container.appendChild(img);
+      } catch (error) {
+        console.error('Error cargando QR:', error);
+      }
+    }
+
+    async function downloadQR(code) {
+      const response = await fetch(`/api/admin/qr?code=${code}`);
+      const data = await response.json();
+      const link = document.createElement('a');
+      link.href = data.qr;
+      link.download = `qr-${code}.png`;
+      link.click();
+    }
+
+    function renderStats(stats) {
+      const grid = document.getElementById('statsGrid');
+      grid.innerHTML = '';
+
+      let totalClicks = 0;
+      let totalQR = 0;
+      let totalNFC = 0;
+
+      Object.entries(stats).forEach(([code, data]) => {
+        totalClicks += data.total;
+        totalQR += data.qr;
+        totalNFC += data.nfc;
+      });
+
+      grid.innerHTML = `
+        <div class="stat-box">
+          <h4>Total Clicks</h4>
+          <p>${totalClicks}</p>
+        </div>
+        <div class="stat-box">
+          <h4>QR Scans</h4>
+          <p>${totalQR}</p>
+        </div>
+        <div class="stat-box">
+          <h4>NFC Taps</h4>
+          <p>${totalNFC}</p>
+        </div>
+        <div class="stat-box">
+          <h4>Piezas Activas</h4>
+          <p>${Object.keys(stats).length}</p>
+        </div>
+      `;
+    }
+
+    function logout() {
+      localStorage.removeItem('authenticated');
+      window.location.href = '/public/login.html';
+    }
+
+    loadPieces();
+    loadStats();
+    setInterval(loadStats, 5000);
+  </script>
+</body>
+</html>
