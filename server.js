@@ -118,12 +118,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // API: generar QR placeholder
+    // API: generar QR placeholder con número
     if (pathname === '/api/admin/qr') {
       const code = query.code;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
-        <rect width="200" height="200" fill="white"/>
-        <text x="100" y="100" font-size="14" text-anchor="middle" dy="0.3em">${code}</text>
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="300">
+        <rect width="250" height="300" fill="white"/>
+        <rect x="25" y="25" width="200" height="200" fill="lightgray" stroke="black" stroke-width="2"/>
+        <text x="125" y="140" font-size="20" font-weight="bold" text-anchor="middle" dy="0.3em">${code}</text>
+        <text x="125" y="250" font-size="16" text-anchor="middle">Pieza #${code}</text>
       </svg>`;
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
