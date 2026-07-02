@@ -2,6 +2,7 @@ const http = require('http');
 const url = require('url');
 const fs = require('fs');
 const path = require('path');
+const { readLeads, writeLeads } = require('./api/leads');
 
 const memory = {};
 
@@ -38,6 +39,30 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (pathname === '/public/crm.html') {
+      const filePath = path.join(__dirname, 'public/crm.html');
+      const content = fs.readFileSync(filePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(content);
+      return;
+    }
+
+    if (pathname === '/crm.css') {
+      const filePath = path.join(__dirname, 'public/crm.css');
+      const content = fs.readFileSync(filePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/css' });
+      res.end(content);
+      return;
+    }
+
+    if (pathname === '/crm.js') {
+      const filePath = path.join(__dirname, 'public/crm.js');
+      const content = fs.readFileSync(filePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'application/javascript' });
+      res.end(content);
+      return;
+    }
+
     // Redirigir a Google Maps
     if (pathname.startsWith('/r/')) {
       const code = pathname.split('/')[2];
@@ -55,6 +80,38 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(302, { Location: piece.link });
       res.end();
       return;
+    }
+
+    // API: CRM leads
+    if (pathname === '/api/leads') {
+      if (req.method === 'GET') {
+        const leads = readLeads();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(leads));
+        return;
+      }
+
+      if (req.method === 'POST') {
+        let body = '';
+        req.on('data', (chunk) => (body += chunk));
+        req.on('end', () => {
+          try {
+            const leads = JSON.parse(body);
+            if (!Array.isArray(leads)) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ error: 'Body debe ser un array' }));
+              return;
+            }
+            writeLeads(leads);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(leads));
+          } catch (e) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          }
+        });
+        return;
+      }
     }
 
     // API: obtener piezas

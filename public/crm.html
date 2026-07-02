@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CRM — locales</title>
+<link rel="stylesheet" href="/crm.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <span class="eyebrow">Interno · no compartir con clientes</span>
+      <h1 class="display">CRM de locales</h1>
+      <p class="lede">Cargá cada local en segundos, actualizalo con un click. Se guarda para todo el equipo.</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn ghost" id="exportBtn">Exportar CSV ↓</button>
+      <button class="btn solid" id="addBtn">+ Agregar local</button>
+    </div>
+  </header>
+
+  <div class="sync-note" id="syncNote">Cargando…</div>
+
+  <input class="search" id="search" type="search" placeholder="Buscar por nombre, zona, estado…" aria-label="Buscar local">
+
+  <div class="summary" id="summary"></div>
+
+  <div class="cards" id="cards"></div>
+
+  <footer class="bottom">Actualizalo apenas hables con alguien — un CRM sirve si está al día, no si es prolijo una vez al mes.</footer>
+</div>
+
+<script src="/crm.js"></script>
+</body>
+</html>
