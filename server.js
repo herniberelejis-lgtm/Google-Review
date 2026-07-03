@@ -22,8 +22,17 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // Servir app unificada
+    if (pathname === '/' || pathname === '/app' || pathname === '/app.html') {
+      const filePath = path.join(__dirname, 'public/app.html');
+      const content = fs.readFileSync(filePath, 'utf-8');
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(content);
+      return;
+    }
+
     // Servir archivos HTML estáticos
-    if (pathname === '/' || pathname === '/public/login.html') {
+    if (pathname === '/public/login.html') {
       const filePath = path.join(__dirname, 'public/login.html');
       const content = fs.readFileSync(filePath, 'utf-8');
       res.writeHead(200, { 'Content-Type': 'text/html' });
