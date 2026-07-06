@@ -184,18 +184,14 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // API: generar QR placeholder con número
+    // API: generar QR real
     if (pathname === '/api/admin/qr') {
       const code = query.code;
-      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="250" height="300">
-        <rect width="250" height="300" fill="white"/>
-        <rect x="25" y="25" width="200" height="200" fill="lightgray" stroke="black" stroke-width="2"/>
-        <text x="125" y="140" font-size="20" font-weight="bold" text-anchor="middle" dy="0.3em">${code}</text>
-        <text x="125" y="250" font-size="16" text-anchor="middle">Pieza #${code}</text>
-      </svg>`;
+      const appUrl = `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : req.headers.host}/r/${code}?s=q`;
+      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
 
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ qr: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}` }));
+      res.end(JSON.stringify({ qr: qrUrl }));
       return;
     }
 
