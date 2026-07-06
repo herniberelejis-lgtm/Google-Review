@@ -2,6 +2,7 @@ const http = require('http');
 const url = require('url');
 const fs = require('fs');
 const path = require('path');
+const QRCode = require('qrcode');
 const { readLeads, writeLeads } = require('./api/leads');
 
 const memory = {};
@@ -184,14 +185,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    // API: generar QR real
+    // API: generar QR real y funcional
     if (pathname === '/api/admin/qr') {
       const code = query.code;
-      const appUrl = `${process.env.VERCEL_URL ? 'https://' + process.env.VERCEL_URL : req.headers.host}/r/${code}?s=q`;
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(appUrl)}`;
+      const appUrl = `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers['x-forwarded-host'] || req.headers.host}/r/${code}?s=q`;
 
-      res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ qr: qrUrl }));
+      QRCode.toDataURL(appUrl, { width: 300, margin: 1 }, (err, dataUrl) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Error generando QR' }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ qr: dataUrl }));
+      });
       return;
     }
 
