@@ -95,12 +95,28 @@
     </div>
     <div class="tabs">
       <button class="tab active" onclick="switchTab('qr')">🔗 Gestión de QR</button>
+      <button class="tab" onclick="switchTab('generator')">⚙️ Generador Dinámico</button>
       <button class="tab" onclick="switchTab('crm')">👥 CRM de Locales</button>
       <button class="tab" onclick="switchTab('stats')">📈 Estadísticas</button>
     </div>
   </div>
 
   <div class="content">
+    <!-- GENERATOR PANEL -->
+    <div id="generatorPanel" class="panel">
+      <h2>Generador de QR Dinámicos</h2>
+      <div class="card" style="max-width: 600px;">
+        <h3>Crear QR Personalizado</h3>
+        <label>Texto o URL:</label>
+        <input type="text" id="qrInput" placeholder="https://ejemplo.com o texto personalizado" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px;">
+        <button class="btn btn-primary" onclick="generateDynamicQR()">📱 Generar QR</button>
+        <div id="dynamicQRResult" style="margin-top: 20px; text-align: center;">
+          <img id="dynamicQRImage" style="max-width: 300px; display: none; border: 1px solid #ddd; border-radius: 5px;">
+        </div>
+        <button id="downloadDynamicBtn" class="btn btn-success" style="margin-top: 10px; display: none;" onclick="downloadDynamicQR()">⬇️ Descargar QR</button>
+      </div>
+    </div>
+
     <!-- QR PANEL -->
     <div id="qrPanel" class="panel active">
       <div class="summary" id="qrSummary"></div>
@@ -394,6 +410,39 @@ function renderStats() {
 }
 
 document.getElementById('crmSearch').addEventListener('input', renderCRM);
+
+// DYNAMIC QR GENERATOR
+async function generateDynamicQR() {
+  const input = document.getElementById('qrInput').value;
+  if (!input) {
+    alert('Ingresa texto o URL');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/qr-dynamic?data=' + encodeURIComponent(input));
+    const data = await res.json();
+    const img = document.getElementById('dynamicQRImage');
+    img.src = data.qr;
+    img.style.display = 'block';
+    document.getElementById('downloadDynamicBtn').style.display = 'inline-block';
+  } catch (err) {
+    alert('Error generando QR: ' + err.message);
+  }
+}
+
+function downloadDynamicQR() {
+  const img = document.getElementById('dynamicQRImage');
+  const link = document.createElement('a');
+  link.href = img.src;
+  link.download = 'qr-' + Date.now() + '.png';
+  link.click();
+}
+
+// Enter key para generar QR
+document.getElementById('qrInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') generateDynamicQR();
+});
 </script>
 
 </body>

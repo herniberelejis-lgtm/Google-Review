@@ -185,6 +185,27 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    // API: generar QR dinámico
+    if (pathname === '/api/qr-dynamic') {
+      const data = query.data;
+      if (!data) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Falta el parámetro data' }));
+        return;
+      }
+
+      QRCode.toDataURL(data, { width: 300, margin: 1 }, (err, dataUrl) => {
+        if (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Error generando QR' }));
+          return;
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ qr: dataUrl }));
+      });
+      return;
+    }
+
     // API: generar QR real y funcional
     if (pathname === '/api/admin/qr') {
       const code = query.code;
